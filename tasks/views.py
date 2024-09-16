@@ -14,7 +14,10 @@ def task_list(request):
 def update_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     if request.method == "POST":
-        task.name = request.POST.get("name")
+        if "name" in request.POST:
+            task.name = request.POST.get("name")
+        if "priority" in request.POST:
+            task.priority = request.POST.get("priority")
         task.save()
         return JsonResponse({"status": "success"})
     return JsonResponse({"status": "error"})
@@ -37,9 +40,13 @@ def create_task(request):
             form = TaskForm(request.POST)
             if form.is_valid():
                 new_task = form.save()
-                print(Task.objects.all())
                 return JsonResponse(
-                    {"status": "success", "name": new_task.name, "task_id": new_task.id}
+                    {
+                        "status": "success",
+                        "name": new_task.name,
+                        "task_id": new_task.id,
+                        "priority": new_task.priority,
+                    }
                 )
             else:
                 return JsonResponse({"status": "error", "errors": form.errors})

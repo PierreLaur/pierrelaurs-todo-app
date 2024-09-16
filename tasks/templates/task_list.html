@@ -6,37 +6,69 @@
         <title>To-Do List</title>
         {% load static %}
         <link rel="stylesheet" href="{% static 'styles.css' %}" />
+        <link href="https://fonts.googleapis.com/css?family=JetBrains Mono" rel="stylesheet" />
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     </head>
     <body>
-        <h1>To-Do List</h1>
-
-        <ul id="task-list">
-            {% if tasks %} {% for task in tasks %}
-            <li id="task-{{ task.id }}">
-                <input
-                    type="checkbox"
-                    class="flip-checkbox"
-                    data-task-id="{{ task.id }}"
-                    {%
-                    if
-                    task.completed
-                    %}checked{%
-                    endif
-                    %} />
+        <div id="init-tasks" style="display: none">
+            {% for task in tasks %}
+            <li
+                id="task-{{ task.id }}"
+                class="task-item"
+                data-task-id="{{ task.id }}"
+                data-priority="{{ task.priority }}"
+                draggable="true">
+                <input type="checkbox" class="flip-checkbox" data-task-id="{{ task.id }}" />
                 <div class="spinner-wrapper">
                     <textarea class="editable" data-task-id="{{task.id}}">{{task.name}}</textarea>
                 </div>
             </li>
-            {% endfor %} {% else %}
-            <li class="no-tasks-message">No tasks yet.</li>
-            {% endif %}
-            <li id="new-task-placeholder">
-                <textarea id="new-task" placeholder="Add a new task"></textarea>
-            </li>
-        </ul>
+            {% endfor %}
+        </div>
+
+        <div class="task-container">
+            <!-- Left Column for Adding Tasks -->
+            <div class="left-column">
+                <ul id="task-list-0" class="task-list">
+                    <textarea id="new-task" placeholder="Add a new task" class="editable"></textarea>
+                </ul>
+            </div>
+
+            <!-- Right Column with 4 lists in a square -->
+            <div class="right-column">
+                <div class="task-grid">
+                    <ul id="task-list-1" class="task-list">
+                        <h3 class="priority-title">Urgent Important</h3>
+                    </ul>
+                    <ul id="task-list-2" class="task-list">
+                        <h3 class="priority-title">Urgent Non-Important</h3>
+                    </ul>
+                    <ul id="task-list-3" class="task-list">
+                        <h3 class="priority-title">Non-Urgent Important</h3>
+                    </ul>
+                    <ul id="task-list-4" class="task-list">
+                        <h3 class="priority-title">Non-Urgent Non-Important</h3>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
         <script>
+            function createLists() {
+                const tasks = $("#init-tasks").children()
+
+                for (let i = 0; i < tasks.length; i++) {
+                    const task = tasks[i]
+
+                    if (!["0", "1", "2", "3", "4"].includes(task.dataset.priority)) {
+                        console.log("Unknown priority: " + task.dataset.priority)
+                        continue
+                    }
+
+                    document.getElementById("task-list-" + task.dataset.priority).appendChild(task)
+                }
+            }
+
             function updateTask($input) {
                 let $wrapper = $input.closest(".spinner-wrapper")
 
@@ -46,9 +78,6 @@
                 if (newName === "") {
                     return // Do not allow empty names
                 }
-
-                // Start color-changing border
-                $wrapper.addClass("spinning")
 
                 $.ajax({
                     url: `/update/${taskId}/`,
@@ -61,12 +90,11 @@
                         if (response.status === "success") {
                             console.log("Task updated successfully.")
                             // Delay removing the spinning class to ensure the animation completes
+                            $wrapper.addClass("spinning")
                             setTimeout(() => $wrapper.removeClass("spinning"), 200) // Match with animation duration
                             // Optional: Add a success state if needed
                         } else {
                             console.log("Failed to update task.")
-                            // Delay removing the spinning class to ensure the animation completes
-                            setTimeout(() => $wrapper.removeClass("spinning"), 200) // Match with animation duration
                             // Optional: Add an error state if needed
                         }
                     },
@@ -78,7 +106,55 @@
                 })
             }
 
+            function filterTasks() {
+                const tasks = document.querySelectorAll(".task-item")
+                tasks.forEach((task) => {
+                    const taskPriority = task.getAttribute("data-priority")
+                    if (
+                        (task.parentElement.id == "task-list-0" && taskPriority == 0) ||
+                        (task.parentElement.id == "task-list-1" && taskPriority == 1) ||
+                        (task.parentElement.id == "task-list-2" && taskPriority == 2) ||
+                        (task.parentElement.id == "task-list-3" && taskPriority == 3) ||
+                        (task.parentElement.id == "task-list-4" && taskPriority == 4)
+                    ) {
+                        task.style.display = ""
+                    } else {
+                        task.style.display = "none"
+                    }
+                })
+
+                const text_areas = document.querySelectorAll(".editable")
+                text_areas.forEach((text_area) => {
+                    adjustTextareaHeight(text_area)
+                })
+            }
+
+            function updateTaskPriority(taskId, newPriority) {
+                $.ajax({
+                    url: `/update/${taskId}/`, // your URL to update task
+                    type: "POST",
+                    data: {
+                        priority: newPriority,
+                        csrfmiddlewaretoken: "{{ csrf_token }}", // Make sure to include the CSRF token
+                    },
+                    success: function (response) {
+                        console.log("Task priority updated successfully.")
+                    },
+                    error: function (error) {
+                        console.log("Failed to update task priority.", error)
+                    },
+                })
+            }
+
+            function adjustTextareaHeight(textarea) {
+                console.log(textarea)
+                textarea.style.height = "16px" // Reset height
+                textarea.style.height = textarea.scrollHeight + "px" // Set to scrollHeight
+            }
+
             $(document).ready(function () {
+                createLists()
+
                 $(document).on("blur", ".editable", function () {
                     updateTask($(this))
                 })
@@ -89,6 +165,35 @@
                         e.preventDefault() // Prevent newline in textarea
                         $(this).blur() // Trigger the blur event to update the task
                     }
+                })
+
+                filterTasks()
+
+                $(document).on("dragstart", ".task-item", function (e) {
+                    e.originalEvent.dataTransfer.setData("text/plain", $(this).data("task-id"))
+                })
+
+                // Allow dropping tasks into lists
+                $(document).on("dragover", function (e) {
+                    e.preventDefault()
+                })
+
+                $(document).on("drop", ".task-list", function (e) {
+                    e.preventDefault()
+                    const taskId = e.originalEvent.dataTransfer.getData("text/plain")
+                    const droppedTask = $(`.task-item[data-task-id="${taskId}"]`)
+                    const listId = $(this).attr("id")
+
+                    // append the task to the list
+                    $(this).append(droppedTask)
+
+                    // Update the priority attribute based on which list the task is dropped into
+                    listIdInt = parseInt(listId.slice(-1))
+                    droppedTask.attr("data-priority", listIdInt)
+
+                    filterTasks()
+                    updateTaskPriority(taskId, droppedTask.attr("data-priority"))
+                    adjustTextareaHeight(droppedTask.find(".editable"))
                 })
 
                 // Handle new task creation
@@ -109,10 +214,8 @@
                             },
                             success: function (response) {
                                 if (response.status === "success") {
-                                    $("#task-list .no-tasks-message").remove()
-
-                                    $("#new-task-placeholder").before(
-                                        `<li id="task-${response.task_id}">
+                                    $("#new-task").after(
+                                        `<li id="task-${response.task_id}" class="task-item" data-task-id="${response.task_id}" data-priority="${response.priority}"  draggable="true">
                                             <input
                                                 type="checkbox"
                                                 class="flip-checkbox"
@@ -126,6 +229,8 @@
                                     )
 
                                     $("#new-task").val("")
+                                    new_task = document.querySelector(`#task-${response.task_id}`)
+                                    adjustTextareaHeight(new_task.querySelector(".editable"))
                                     console.log("New task added successfully.")
                                 } else {
                                     console.log("Failed to add new task.")
@@ -138,10 +243,24 @@
                     }
                 })
 
+                // Automatically adjust the height of each textarea based on its content on page load
+                $(".editable:not(#new-task)").each(function () {
+                    adjustTextareaHeight(this)
+                })
+
                 // Automatically adjust the height of the textarea based on content
                 $(document).on("input", ".editable", function () {
-                    this.style.height = "auto" // Reset height
-                    this.style.height = this.scrollHeight + "px" // Set to scrollHeight
+                    adjustTextareaHeight(this)
+                })
+
+                // Disable drag for the text input area
+                $(document).on("mouseover", ".editable", function (e) {
+                    $(this).closest(".task-item").attr("draggable", false)
+                })
+
+                // Enable drag for the text input area
+                $(document).on("mouseout", ".editable", function (e) {
+                    $(this).closest(".task-item").attr("draggable", true)
                 })
 
                 // Handle checkbox change
