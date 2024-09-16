@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>To-Do List</title>
+        {% load static %}
+        <link rel="stylesheet" href="{% static 'styles.css' %}" />
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    </head>
+    <body>
+        <h1>To-Do List</h1>
+
+        <ul id="task-list">
+            {% if tasks %} {% for task in tasks %}
+            <li id="task-{{ task.id }}">
+                <input
+                    type="checkbox"
+                    class="flip-checkbox"
+                    data-task-id="{{ task.id }}"
+                    {%
+                    if
+                    task.completed
+                    %}checked{%
+                    endif
+                    %} />
+                <div class="spinner-wrapper">
+                    <textarea class="editable" data-task-id="{{task.id}}">{{task.name}}</textarea>
+                </div>
+            </li>
+            {% endfor %} {% else %}
+            <li class="no-tasks-message">No tasks yet.</li>
+            {% endif %}
+            <li id="new-task-placeholder">
+                <textarea id="new-task" placeholder="Add a new task"></textarea>
+            </li>
+        </ul>
+
+        <script>
+            function updateTask($input) {
+                let $wrapper = $input.closest(".spinner-wrapper")
+
+                let taskId = $input.data("task-id")
+                let newName = $input.val().trim()
+
+                if (newName === "") {
+                    return // Do not allow empty names
+                }
+
+                // Start color-changing border
+                $wrapper.addClass("spinning")
+
+                $.ajax({
+                    url: `/update/${taskId}/`,
+                    type: "POST",
+                    data: {
+                        name: newName,
+                        csrfmiddlewaretoken: "{{ csrf_token }}",
+                    },
+                    success: function (response) {
+                        if (response.status === "success") {
+                            console.log("Task updated successfully.")
+                            // Delay removing the spinning class to ensure the animation completes
+                            setTimeout(() => $wrapper.removeClass("spinning"), 200) // Match with animation duration
+                            // Optional: Add a success state if needed
+                        } else {
+                            console.log("Failed to update task.")
+                            // Delay removing the spinning class to ensure the animation completes
+                            setTimeout(() => $wrapper.removeClass("spinning"), 200) // Match with animation duration
+                            // Optional: Add an error state if needed
+                        }
+                    },
+                    error: function () {
+                        console.log("An error occurred.")
+                        // Delay removing the spinning class to ensure the animation completes
+                        setTimeout(() => $wrapper.removeClass("spinning"), 200) // Match with animation duration
+                    },
+                })
+            }
+
+            $(document).ready(function () {
+                $(document).on("blur", ".editable", function () {
+                    updateTask($(this))
+                })
+
+                $(document).on("keypress", ".editable", function (e) {
+                    // Check if Enter key is pressed
+                    if (e.which === 13) {
+                        e.preventDefault() // Prevent newline in textarea
+                        $(this).blur() // Trigger the blur event to update the task
+                    }
+                })
+
+                // Handle new task creation
+                $("#new-task").keypress(function (e) {
+                    if (e.which === 13) {
+                        // Enter key pressed
+                        let newName = $(this).val()
+                        if (newName.trim() === "") {
+                            return // Don't add an empty task
+                        }
+
+                        $.ajax({
+                            url: "/create/",
+                            type: "POST",
+                            data: {
+                                name: newName,
+                                csrfmiddlewaretoken: "{{ csrf_token }}",
+                            },
+                            success: function (response) {
+                                if (response.status === "success") {
+                                    $("#task-list .no-tasks-message").remove()
+
+                                    $("#new-task-placeholder").before(
+                                        `<li id="task-${response.task_id}">
+                                            <input
+                                                type="checkbox"
+                                                class="flip-checkbox"
+                                                data-task-id="${response.task_id}" />
+                                            <div class="spinner-wrapper">
+                                                <textarea
+                                                    class="editable"
+                                                    data-task-id="${response.task_id}">${response.name}</textarea>
+                                            </div>
+                                        </li>`
+                                    )
+
+                                    $("#new-task").val("")
+                                    console.log("New task added successfully.")
+                                } else {
+                                    console.log("Failed to add new task.")
+                                    if (response.errors) {
+                                        alert("Error: " + JSON.stringify(response.errors))
+                                    }
+                                }
+                            },
+                        })
+                    }
+                })
+
+                // Automatically adjust the height of the textarea based on content
+                $(document).on("input", ".editable", function () {
+                    this.style.height = "auto" // Reset height
+                    this.style.height = this.scrollHeight + "px" // Set to scrollHeight
+                })
+
+                // Handle checkbox change
+                $(document).on("change", ".flip-checkbox", function () {
+                    let taskId = $(this).data("task-id")
+                    let isChecked = $(this).is(":checked")
+
+                    $.ajax({
+                        url: `/complete/${taskId}/`,
+                        type: "POST",
+                        data: {
+                            completed: isChecked,
+                            csrfmiddlewaretoken: "{{ csrf_token }}",
+                        },
+                        success: function (response) {
+                            if (response.status === "success") {
+                                if (isChecked) {
+                                    $(`#task-${taskId} .editable`).css("text-decoration", "line-through")
+                                    // Optionally, remove the task if you want it to disappear immediately
+                                    // $(`#task-${taskId}`).remove();
+                                } else {
+                                    $(`#task-${taskId} .editable`).css("text-decoration", "none")
+                                }
+                            } else {
+                                console.log("Failed to update task.")
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            console.log("Error updating task:", error)
+                        },
+                    })
+                })
+            })
+        </script>
+    </body>
+</html>
