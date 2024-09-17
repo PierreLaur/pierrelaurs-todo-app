@@ -25,8 +25,8 @@ SECRET_KEY = "django-insecure-kl60soc_pr7!#f!(%jg^2*7s0(u&ki07w)ax@#nddnv9vqo7n8
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", "https://pierrelaurs-todo-app.onrender.com"]
-CSRF_TRUSTED_ORIGINS = ["https://pierrelaurs-todo-app.onrender.com"]
+ALLOWED_HOSTS = ["127.0.0.1", "pierrelaurs-todo-app.onrender.com"]
+CSRF_TRUSTED_ORIGINS = ["pierrelaurs-todo-app.onrender.com"]
 
 # Application definition
 
