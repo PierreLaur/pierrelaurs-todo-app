@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-kl60soc_pr7!#f!(%jg^2*7s0(u&ki07w)ax@#nddnv9vqo7n8"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
+DEBUG = True
 
 ALLOWED_HOSTS = ["127.0.0.1", "pierrelaurs-todo-app.onrender.com"]
 CSRF_TRUSTED_ORIGINS = ["https://pierrelaurs-todo-app.onrender.com"]
@@ -124,4 +124,4 @@ STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+# STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
