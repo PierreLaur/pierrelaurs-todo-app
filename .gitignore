@@ -14,11 +14,6 @@ env/
 **/migrations/*
 !**/migrations/__init__.py
 
-# Static and media files
-staticfiles/
-static/
-media/
-
 # Local environment variables and secrets
 .env
 .env.*
