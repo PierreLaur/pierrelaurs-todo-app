@@ -6,6 +6,7 @@
         <title>To-Do List</title>
         {% load static %}
         <link rel="stylesheet" href="{% static 'styles.css' %}" />
+        <link rel="stylesheet" href="{% static 'themes.css' %}" />
         <link href="https://fonts.googleapis.com/css?family=JetBrains Mono" rel="stylesheet" />
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     </head>
@@ -26,28 +27,32 @@
             {% endfor %}
         </div>
 
-        <div class="task-container">
-            <!-- Left Column for Adding Tasks -->
+        <div class="layout-wrapper">
             <div class="left-column">
-                <ul id="task-list-0" class="task-list">
+                <ul id="task-list-container-0" class="task-list-container">
                     <textarea id="new-task" placeholder="Add a new task" class="editable"></textarea>
+                    <ul id="task-list-0" class="task-list"></ul>
                 </ul>
             </div>
 
             <!-- Right Column with 4 lists in a square -->
             <div class="right-column">
                 <div class="task-grid">
-                    <ul id="task-list-1" class="task-list">
+                    <ul id="task-list-container-1" class="task-list-container">
                         <h3 class="priority-title">Urgent Important</h3>
+                        <ul id="task-list-1" class="task-list"></ul>
                     </ul>
-                    <ul id="task-list-2" class="task-list">
+                    <ul id="task-list-container-2" class="task-list-container">
                         <h3 class="priority-title">Urgent Non-Important</h3>
+                        <ul id="task-list-2" class="task-list"></ul>
                     </ul>
-                    <ul id="task-list-3" class="task-list">
+                    <ul id="task-list-container-3" class="task-list-container">
                         <h3 class="priority-title">Non-Urgent Important</h3>
+                        <ul id="task-list-3" class="task-list"></ul>
                     </ul>
-                    <ul id="task-list-4" class="task-list">
+                    <ul id="task-list-container-4" class="task-list-container">
                         <h3 class="priority-title">Non-Urgent Non-Important</h3>
+                        <ul id="task-list-4" class="task-list"></ul>
                     </ul>
                 </div>
             </div>
@@ -70,6 +75,7 @@
             }
 
             function updateTask($input) {
+                console.log("update " + $input)
                 let $wrapper = $input.closest(".spinner-wrapper")
 
                 let taskId = $input.data("task-id")
@@ -147,19 +153,32 @@
             }
 
             function adjustTextareaHeight(textarea) {
-                console.log(textarea)
-                textarea.style.height = "16px" // Reset height
+                textarea.style.height = "1px" // Reset height
+                // Force reflow
+                textarea.offsetHeight
                 textarea.style.height = textarea.scrollHeight + "px" // Set to scrollHeight
             }
+
+            window.onload = function () {
+                document.getElementById("new-task").focus()
+            }
+
+            document.addEventListener("DOMContentLoaded", function () {
+                const themes = ["theme1", "theme2", "theme3", "theme4"]
+                const randomTheme = themes[Math.floor(Math.random() * themes.length)]
+                // const randomTheme = "theme4"
+                document.body.classList.add(randomTheme)
+            })
 
             $(document).ready(function () {
                 createLists()
 
                 $(document).on("blur", ".editable", function () {
+                    console.log("blur")
                     updateTask($(this))
                 })
 
-                $(document).on("keypress", ".editable", function (e) {
+                $(document).on("keypress", ".editable:not(#new-task)", function (e) {
                     // Check if Enter key is pressed
                     if (e.which === 13) {
                         e.preventDefault() // Prevent newline in textarea
@@ -178,14 +197,15 @@
                     e.preventDefault()
                 })
 
-                $(document).on("drop", ".task-list", function (e) {
+                $(document).on("drop", ".task-list-container", function (e) {
                     e.preventDefault()
                     const taskId = e.originalEvent.dataTransfer.getData("text/plain")
                     const droppedTask = $(`.task-item[data-task-id="${taskId}"]`)
+
                     const listId = $(this).attr("id")
 
                     // append the task to the list
-                    $(this).append(droppedTask)
+                    $(`#task-list-${listId.slice(-1)}`).append(droppedTask)
 
                     // Update the priority attribute based on which list the task is dropped into
                     listIdInt = parseInt(listId.slice(-1))
@@ -199,6 +219,7 @@
                 // Handle new task creation
                 $("#new-task").keypress(function (e) {
                     if (e.which === 13) {
+                        e.preventDefault()
                         // Enter key pressed
                         let newName = $(this).val()
                         if (newName.trim() === "") {
